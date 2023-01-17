@@ -12,6 +12,7 @@ Spider move(int) function move forward or backward
 const center = document.querySelector("center")
 const sprite = document.querySelector("sprite")
 const edgeConnectors = document.querySelectorAll('toEdges *')
+const connectEC = document.querySelector("edgeConnect")
 let windowDimensions = {x: window.innerWidth, y: window.innerHeight}
  
  
@@ -83,25 +84,104 @@ class Line {
  }
   render() {
    this.domElement.style.left = `${this.origin.x}px`
-   this.domElement.style.top = `${this.origin.y-5}px`
-   this.domElement.style.width = this.length+20
+   this.domElement.style.top = `${this.origin.y}px`
+   this.domElement.style.width = this.length
    this.domElement.style.transform = `rotate(${this.theta}rad)`
  }
- updateCenter() {
- 
+ updateCenter(coord) {
+  this.origin = coord
+  this.x = this.point.x-this.origin.x
+  this.y = this.point.y-this.origin.y
+  this.length = Math.sqrt(Math.pow(this.x, 2)+Math.pow(this.y, 2))
+  this.sin = this.y/this.length
+  this.cos = this.x/this.length
+  this.tan = this.y/this.x
+  let cosTheta = Math.acos(this.cos)
+  this.theta = this.sin<0?-cosTheta:cosTheta
+  this.render()
  }
  updatePoint(coord) {
-   
+  this.point = coord
+  this.x = this.point.x-this.origin.x
+  this.y = this.point.y-this.origin.y
+  this.length = Math.sqrt(Math.pow(this.x, 2)+Math.pow(this.y, 2))
+  this.sin = this.y/this.length
+  this.cos = this.x/this.length
+  this.tan = this.y/this.x
+  let cosTheta = Math.acos(this.cos)
+  this.theta = this.sin<0?-cosTheta:cosTheta
+  this.render()
  }
  
  circlePoint(radius) {
- 
+    let x = this.origin.x + radius * this.cos
+    let y = this.origin.y + radius * this.sin
+    return new Point(x, y)
+ }
+}
+
+class Circle {
+  constructor(radius) {
+    this.radius = radius
+    let connectionLines = []
+    edgeLines.forEach((ele, ind) => {
+      let secondLine = ind===edgeLines.length-1?0:ind+1
+      let temp = new Line(connectEC, false, edgeLines[ind].circlePoint(radius), edgeLines[secondLine].circlePoint(radius))
+      temp.render()
+      connectionLines.push(temp)
+    })
+    this.lines = connectionLines
+  }
+
+ updateCircle() {
+  this.lines.forEach((ele, ind) => {
+    let secondLine = ind===edgeLines.length-1?0:ind+1
+    ele.updateCenter(edgeLines[ind].circlePoint(this.radius))
+    ele.updatePoint(edgeLines[secondLine].circlePoint(this.radius))
+  })
  }
 }
  
-let centerCoords = {x: (windowDimensions.x/4 + windowDimensions.x*randomX), y: (windowDimensions.y/4 + windowDimensions.y*randomY)}
+let defaultCenter = {x: (windowDimensions.x/4 + windowDimensions.x*randomX), y: (windowDimensions.y/4 + windowDimensions.y*randomY)}
  
-function renderWeb() {
+
+let right = windowDimensions.x
+let bottom = windowDimensions.y
+let halfright = right/2
+let halfbottom = bottom/2
+let edgeLines = []
+
+const corners = [
+  {x: right, y: bottom},
+  {x: right, y: halfbottom}, 
+  {x: right, y: 0}, 
+  {x: halfright, y: 0},
+  {x: 0, y: 0},   
+  {x: 0, y: halfbottom},  
+  {x: 0, y: bottom},  
+  {x: halfright, y: bottom}
+]
+edgeConnectors.forEach((ele, ind) => {
+  temp = new Line(null, ele, defaultCenter, corners[ind])
+  temp.render()
+  edgeLines.push(temp)
+})
+const screenLength = Math.sqrt(Math.pow(right, 2) + Math.pow(bottom, 2))
+const halfScreen = screenLength/2
+const numberOfCircles = Math.floor(Math.random()*4+1)
+const allCircles = new Array(numberOfCircles).fill(1).map((ele, ind) => {
+  let temp = new Circle(halfScreen*ind/(numberOfCircles+1))
+  return temp
+})
+//[new Circle(screenLength/8), new Circle(screenLength/4), new Circle(screenLength/8*3)]
+
+
+
+
+
+
+
+function renderWeb(centerCoords = defaultCenter) {
  let right = windowDimensions.x
  let bottom = windowDimensions.y
  let halfright = right/2
@@ -109,15 +189,12 @@ function renderWeb() {
  center.style.left= `${centerCoords.x}px`
  center.style.top = `${centerCoords.y}px`
  
- 
- let edgeLines = []
- const corners = [{x: right, y: bottom}, {x: 0, y: bottom}, {x: right, y: 0}, {x: 0, y: 0}, {x: 0, y: halfbottom},  {x: right, y: halfbottom},  {x: halfright, y: 0},  {x: halfright, y: bottom}]
- edgeConnectors.forEach((ele, ind) => {
-   temp = new Line(null, ele, centerCoords, corners[ind])
-   temp.render()
-   edgeLines.push(temp)
- })
- }
+ edgeLines.forEach((ele, ind) => {
+   ele.updateCenter(centerCoords)
+   ele.render()
+})
+allCircles.forEach(ele => ele.updateCircle())
+}
  
  
  
@@ -126,8 +203,6 @@ function renderWeb() {
  
  
  
- 
-renderWeb()
  
 window.addEventListener('resize', event => {
  windowDimensions = {x: window.innerWidth, y: window.innerHeight}
@@ -138,9 +213,8 @@ window.addEventListener('resize', event => {
 const followMouse = true
 if (followMouse) {
  window.addEventListener('mousemove', event => {
- 
      centerCoords = {x: event.clientX, y: event.clientY}
-     renderWeb()
+     renderWeb(centerCoords)
  })
 }
  
