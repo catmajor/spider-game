@@ -80,7 +80,7 @@ class Line {
      this.origin = {x:point.x-this.x, y:point.y-this.y}
    }
    else throw new Error("NotEnoughInfo")
-   this.collisionBox = this.domElement.getBoundingClientRect()
+   this.b = origin.y-origin.x*this.tan
    allLines.push(this)
  }
   render() {
@@ -100,7 +100,8 @@ class Line {
   let cosTheta = Math.acos(this.cos)
   this.theta = this.sin<0?-cosTheta:cosTheta
   this.render()
-  this.collisionBox = this.domElement.getBoundingClientRect()
+  this.b = this.origin.y-this.origin.x*this.tan
+  console.log(this.b)
  }
  updatePoint(coord) {
   this.point = coord
@@ -113,7 +114,8 @@ class Line {
   let cosTheta = Math.acos(this.cos)
   this.theta = this.sin<0?-cosTheta:cosTheta
   this.render()
-  this.collisionBox = this.domElement.getBoundingClientRect()
+  this.b = this.origin.y-this.origin.x*this.tan
+
  }
  
  circlePoint(radius) {
@@ -121,14 +123,22 @@ class Line {
     let y = this.origin.y + radius * this.sin
     return new Point(x, y)
  }
+ matchLine(point) {
+    let yBounds = this.origin.y>this.point.y?{upper:this.origin.y, lower:this.point.y}:{upper:this.point.y, lower:this.origin.y}
+    let xBounds = this.origin.x>this.point.x?{upper:this.origin.x, lower:this.point.x}:{upper:this.point.x, lower:this.origin.x}
+ 
+    if (
+      this.tan*point.x+this.b+100*this.sin>point.y &&
+      this.tan*point.x+this.b-100*this.sin<point.y &&
+      point.x < xBounds.upper && point.x > xBounds.lower &&
+      point.y < yBounds.upper && point.y > yBounds.lower
+
+    ) return true
+    else return false
+ }
 }
 
-class CircleLine extends Line {
-  constructor(domParent = false, domElement = false, origin = false, point = false, theta = false, length = false) {
-    super(domParent, domElement, origin, point, theta, length)
-    this.b = origin.y-origin.x*this.tan
-  }
-}
+
 
 
 class Circle {
@@ -137,7 +147,7 @@ class Circle {
     let connectionLines = []
     edgeLines.forEach((ele, ind) => {
       let secondLine = ind===edgeLines.length-1?0:ind+1
-      let temp = new CircleLine(connectEC, false, edgeLines[ind].circlePoint(radius), edgeLines[secondLine].circlePoint(radius))
+      let temp = new Line(connectEC, false, edgeLines[ind].circlePoint(radius), edgeLines[secondLine].circlePoint(radius))
       temp.render()
       connectionLines.push(temp)
     })
@@ -158,13 +168,24 @@ class Spider {
     this.position = position
     this.domElement = domElement
     this.theta = 0
+    this.center = new Point(position.x-50, position.y-50)
   }
   render() {
-   this.domElement.style.left = `${this.position.x}px`
-   this.domElement.style.top = `${this.position.y-5}px`
+   this.domElement.style.left = `${this.center.x}px`
+   this.domElement.style.top = `${this.center.y}px`
    this.domElement.style.transform = `rotate(${this.theta}rad)`
-}
- 
+  }
+  onLine() {
+    for (const line in allLines) {
+
+      if (allLines[line].matchLine(this.center)) return true
+    } return false 
+  }
+  updateCenter(point) {
+    this.center = new Point(point.x-50, point.y-50)
+    this.render()
+  }
+} 
  
 let defaultCenter = {x: (windowDimensions.x/4 + windowDimensions.x*randomX), y: (windowDimensions.y/4 + windowDimensions.y*randomY)}
  
@@ -217,6 +238,7 @@ function renderWeb(centerCoords = defaultCenter) {
    ele.render()
 })
 allCircles.forEach(ele => ele.updateCircle())
+
 }
  
 window.addEventListener('resize', event => {
@@ -230,7 +252,10 @@ let followMouse = false
 window.addEventListener('mousemove', event => {
   if (followMouse) {
      centerCoords = {x: event.clientX, y: event.clientY}
-     renderWeb(centerCoords)
+     //renderWeb(centerCoords)
+     test.updateCenter(centerCoords)
+     if (test.onLine()) test.domElement.style.backgroundColor = "#00ff00" 
+     else test.domElement.style.backgroundColor = "#ff0000"
   }
 })
  sprite.textContent = allLines.length
