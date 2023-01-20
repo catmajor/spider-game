@@ -9,6 +9,7 @@ Spider move(int) function move forward or backward
 const sprite = document.querySelector("sprite")
 const toEdge = document.querySelector('toEdges')
 const connectEC = document.querySelector("edgeConnect")
+const web = document.querySelector('web')
 let allLines = []
 let windowDimensions = {x: window.innerWidth, y: window.innerHeight}
  
@@ -25,7 +26,7 @@ class Web {
  
 class Point {
  constructor(x = null, y = null) {
-   if (!x||!y) throw new Error("NotValid")
+   if (x===null&&y===null) throw new Error("NotValid")
    this.x = x
    this.y = y
  }
@@ -124,12 +125,17 @@ class Line {
     return new Point(x, y)
  }
  matchLine(point) {
+    let r = this.origin.x/this.cos
+
     let yBounds = this.origin.y>this.point.y?{upper:this.origin.y, lower:this.point.y}:{upper:this.point.y, lower:this.origin.y}
     let xBounds = this.origin.x>this.point.x?{upper:this.origin.x, lower:this.point.x}:{upper:this.point.x, lower:this.origin.x}
- 
+
+    let a = this.tan
+    let b = 1
+    let c = r * this.sin
+    let distanceToLine = Math.abs(a*point.x+b*point.y+c)/Math.sqrt(Math.pow(a,2)+Math.pow(b,2))
     if (
-      this.tan*point.x+this.b+100*this.sin>point.y &&
-      this.tan*point.x+this.b-100*this.sin<point.y &&
+      distanceToLine<100 &&
       point.x < xBounds.upper && point.x > xBounds.lower &&
       point.y < yBounds.upper && point.y > yBounds.lower
 
@@ -179,16 +185,19 @@ class Spider {
     for (const line in allLines) {
 
       if (allLines[line].matchLine(this.center)) return true
+      else continue
     } return false 
   }
   updateCenter(point) {
-    this.center = new Point(point.x-50, point.y-50)
+    let newX = point.x - 50
+    let newY = point.y - 50
+    this.center = new Point(newX, newY)
     this.render()
   }
 } 
  
 let defaultCenter = {x: (windowDimensions.x/4 + windowDimensions.x*randomX), y: (windowDimensions.y/4 + windowDimensions.y*randomY)}
- 
+let centerLine = new Line(web, false, new Point(0,0), defaultCenter)
 
 let right = windowDimensions.x
 let bottom = windowDimensions.y
@@ -250,19 +259,20 @@ window.addEventListener('resize', event => {
 let followMouse = false
 
 window.addEventListener('mousemove', event => {
+  centerCoords = {x: event.clientX, y: event.clientY}
   if (followMouse) {
-     centerCoords = {x: event.clientX, y: event.clientY}
      //renderWeb(centerCoords)
-     test.updateCenter(centerCoords)
-     if (test.onLine()) test.domElement.style.backgroundColor = "#00ff00" 
-     else test.domElement.style.backgroundColor = "#ff0000"
+    
   }
+  test.updateCenter(centerCoords)
+  if (test.onLine()) test.domElement.style.backgroundColor = "#00ff00" 
+  else test.domElement.style.backgroundColor = "#ff0000"
 })
  sprite.textContent = allLines.length
 
  
-window.addEventListener('mousedown', event => {
+/window.addEventListener('mousedown', event => {
   followMouse = !followMouse
   centerCoords = {x: event.clientX, y: event.clientY}
-  renderWeb(centerCoords)
+  //renderWeb(centerCoords)
 })
